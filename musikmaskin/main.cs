@@ -34,17 +34,22 @@ public class MusikMaskinCommand : Command<MusikMaskinSettings>
     public override int Execute(CommandContext? context, MusikMaskinSettings settings)
     {
         AnsiConsole.MarkupLine($"Hello, [green]dog[/]!");
-        
-        Synth.SynthMono(TimeSpan.FromSeconds(3), t => SinusGenerator(t, 440))
+
+        double master = 0.5;
+        Synth.SynthMono(TimeSpan.FromSeconds(3), t => master * SineGen(t, 440))
             .WriteToDisk("mono.wav");
-        Synth.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: SinusGenerator(t, 440), Right: SinusGenerator(t, 1000)))
+        Synth.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: master * SineGen(t, 440), Right: master * 0.5 * SquareGen(t, 400)))
             .WriteToDisk("stereo.wav");
         return 0;
     }
 
-    private static double SinusGenerator(double t, double freq)
+    private static double SineGen(double t, double freq)
     {
         return Math.Sin(t * (freq * Math.PI * 2));
+    }
+    private static double SquareGen(double t, double freq)
+    {
+        return SineGen(t, freq) > 0.0 ? 1.0 : -1.0;
     }
 }
 
