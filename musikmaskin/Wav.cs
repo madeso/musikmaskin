@@ -5,7 +5,7 @@ namespace MusikMaskin;
 
 internal record Sample(double Left, double Right);
 
-internal static class Synth
+internal static class SynthGen
 {
     internal static Wav SynthMono(TimeSpan length, Func<double, double> generator, uint sampleRate=44100)
     {

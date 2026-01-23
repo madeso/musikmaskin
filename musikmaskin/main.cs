@@ -36,9 +36,16 @@ public class MusikMaskinCommand : Command<MusikMaskinSettings>
         AnsiConsole.MarkupLine($"Hello, [green]dog[/]!");
 
         double master = 0.5;
-        Synth.SynthMono(TimeSpan.FromSeconds(3), t => master * SineGen(t, 440))
+        var scale = new WesternScale();
+        var song = new Song();
+        SynthGen.SynthMono(TimeSpan.FromSeconds(10), t =>
+            {
+                var freq = song.FrequencyAtSecond(scale, t);
+                if (freq == null) return 0.0f;
+                return master * 0.5 * SquareGen(t, freq.Value);
+            })
             .WriteToDisk("mono.wav");
-        Synth.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: master * SineGen(t, 440), Right: master * 0.5 * SquareGen(t, 400)))
+        SynthGen.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: master * SineGen(t, 440), Right: master * 0.5 * SquareGen(t, 400)))
             .WriteToDisk("stereo.wav");
         return 0;
     }
