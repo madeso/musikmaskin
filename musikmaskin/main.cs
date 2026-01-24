@@ -42,21 +42,37 @@ public class MusikMaskinCommand : Command<MusikMaskinSettings>
             {
                 var freq = song.FrequencyAtSecond(scale, t);
                 if (freq == null) return 0.0f;
-                return master * 0.5 * SquareGen(t, freq.Value);
+                return master * 0.5 * Oscillator.SawHarsh(t, freq.Value);
             })
             .WriteToDisk("mono.wav");
-        SynthGen.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: master * SineGen(t, 440), Right: master * 0.5 * SquareGen(t, 400)))
+        SynthGen.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: master * Oscillator.Sine(t, 440), Right: master * 0.5 * Oscillator.Square(t, 400)))
             .WriteToDisk("stereo.wav");
         return 0;
     }
+}
 
-    private static double SineGen(double t, double freq)
+internal static class Oscillator
+{
+    // from hertz to angular velocity
+    private static double W(double hertz) => hertz * Math.PI * 2;
+
+    public static double Sine(double t, double freq) => Math.Sin(t * W(freq));
+    public static double Square(double t, double freq) => Math.Sin(t * W(freq)) > 0.0 ? 1.0 : -1.0;
+    public static double Triangle(double t, double freq) => Math.Asin(Math.Sin(t * W(freq))) * (2.0 / Math.PI);
+
+    public static double SawWarm(double t, double freq, int steps)
     {
-        return Math.Sin(t * (freq * Math.PI * 2));
+        var r = 0.0;
+        for (var stepIndex = 1; stepIndex <= steps; stepIndex += 1)
+        {
+            r += Math.Sin(stepIndex * t * W(freq)) / stepIndex;
+        }
+        return r;
     }
-    private static double SquareGen(double t, double freq)
-    {
-        return SineGen(t, freq) > 0.0 ? 1.0 : -1.0;
-    }
+
+    public static double SawHarsh(double t, double freq) => (2 / Math.PI) * (freq * Math.PI * (t % (1.0 / freq)) - Math.PI / 2);
+
+    private static readonly Random Rng = new Random();
+    public static double Noise() => Rng.NextDouble() * 2 - 1;
 }
 
