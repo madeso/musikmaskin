@@ -51,28 +51,3 @@ public class MusikMaskinCommand : Command<MusikMaskinSettings>
     }
 }
 
-internal static class Oscillator
-{
-    // from hertz to angular velocity
-    private static double W(double hertz) => hertz * Math.PI * 2;
-
-    public static double Sine(double t, double freq) => Math.Sin(t * W(freq));
-    public static double Square(double t, double freq) => Math.Sin(t * W(freq)) > 0.0 ? 1.0 : -1.0;
-    public static double Triangle(double t, double freq) => Math.Asin(Math.Sin(t * W(freq))) * (2.0 / Math.PI);
-
-    public static double SawWarm(double t, double freq, int steps)
-    {
-        var r = 0.0;
-        for (var stepIndex = 1; stepIndex <= steps; stepIndex += 1)
-        {
-            r += Math.Sin(stepIndex * t * W(freq)) / stepIndex;
-        }
-        return r;
-    }
-
-    public static double SawHarsh(double t, double freq) => (2 / Math.PI) * (freq * Math.PI * (t % (1.0 / freq)) - Math.PI / 2);
-
-    private static readonly Random Rng = new Random();
-    public static double Noise() => Rng.NextDouble() * 2 - 1;
-}
-
