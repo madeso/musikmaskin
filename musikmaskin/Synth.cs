@@ -56,3 +56,34 @@ internal static class Oscillator
     public static double Noise() => Rng.NextDouble() * 2 - 1;
 }
 
+internal record EnvelopeADSR(double AttackTime, double DecayTime, double ReleaseTime, double SustainAmplitude)
+{
+    double AmplitudeAt(double time, double notePressedTime, double? noteReleaseTime)
+    {
+        if (noteReleaseTime == null) return GetAds(time, notePressedTime);
+        
+        var life = time - noteReleaseTime.Value;
+        
+        if (life < 0.0f) return GetAds(time, notePressedTime);
+
+        if (life > ReleaseTime) return 0.0f;
+
+        var from = GetAds(noteReleaseTime.Value, notePressedTime);
+        return from * (life/ReleaseTime);
+    }
+
+    private double GetAds(double time, double triggeredTime)
+    {
+        var life = time - triggeredTime;
+        if (life <= 0.0) return 0;
+
+        // ads
+        var attackLife = life - AttackTime;
+        if (attackLife < 0) return life/AttackTime;
+
+        var sustainChange = 1 - SustainAmplitude;
+        if (attackLife < DecayTime) return 1 - (1-(attackLife / DecayTime))*sustainChange;
+
+        return SustainAmplitude;
+    }
+}
