@@ -1,5 +1,12 @@
 musikmaskin/bin
 musikmaskin/obj
+test/bin
+test/obj
 .vs/
-*.bak
 junk/
+
+*.bak
+*.user
+
+# should this be ignored?
+*.lutconfig

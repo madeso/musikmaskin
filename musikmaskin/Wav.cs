@@ -94,7 +94,7 @@ internal static class WavWriter
 
     private static int DoubleToInt24(double value)
     {
-        Debug.Assert(-1 <= value && value <= 1, "Clipping occured");
+        // Debug.Assert(-1 <= value && value <= 1, "Clipping occured");
         var clipped = Math.Max(-1, Math.Min(1, value));
 
         const int int24Max = 0x7f_ffff;

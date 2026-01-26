@@ -37,13 +37,8 @@ public class MusikMaskinCommand : Command<MusikMaskinSettings>
 
         double master = 0.5;
         var scale = new WesternScale();
-        var song = new Song();
-        SynthGen.SynthMono(TimeSpan.FromSeconds(10), t =>
-            {
-                var freq = song.FrequencyAtSecond(scale, t);
-                if (freq == null) return 0.0f;
-                return master * 0.5 * Oscillator.SawHarsh(t, freq.Value);
-            })
+        var song = new Song(scale, new SimpleInstrument());
+        SynthGen.SynthMono(TimeSpan.FromSeconds(10), t => song.Synth(t))
             .WriteToDisk("mono.wav");
         SynthGen.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: master * Oscillator.Sine(t, 440), Right: master * 0.5 * Oscillator.Square(t, 400)))
             .WriteToDisk("stereo.wav");
