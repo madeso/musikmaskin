@@ -164,15 +164,15 @@ public record EnvelopeADSR(double AttackTime, double DecayTime, double ReleaseTi
 {
     public double AmplitudeAt(double time, double notePressedTime, double? noteReleaseTime)
     {
-        if (noteReleaseTime == null) return GetAds(time, notePressedTime);
+        if (noteReleaseTime == null) return CalculateAds(time, notePressedTime);
         
         var life = time - noteReleaseTime.Value;
         
-        if (life < 0.0f) return GetAds(time, notePressedTime);
+        if (life < 0.0f) return CalculateAds(time, notePressedTime);
 
         if (life > ReleaseTime) return 0.0f;
 
-        var from = GetAds(noteReleaseTime.Value, notePressedTime);
+        var from = CalculateAds(noteReleaseTime.Value, notePressedTime);
         return from * (life/ReleaseTime);
     }
 
@@ -182,7 +182,7 @@ public record EnvelopeADSR(double AttackTime, double DecayTime, double ReleaseTi
         return life < ReleaseTime;
     }
 
-    private double GetAds(double time, double notePressedTime)
+    private double CalculateAds(double time, double notePressedTime)
     {
         var life = time - notePressedTime;
         if (life <= 0.0) return 0;
