@@ -10,3 +10,4 @@ junk/
 
 # should this be ignored?
 *.lutconfig
+/*.wav
