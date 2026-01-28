@@ -1,58 +1,105 @@
 ﻿namespace MusikMaskin;
 
-
-internal class Song(WesternScale scale, Instrument instrument)
+internal record NoteToPlay(double StartTimeBeat, double LengthBeat, int Semitone)
 {
-    public double BeatsPerMinute = 120 * 3;
+    public double EndTimeBeat => StartTimeBeat + LengthBeat;
+}
 
-    // Mary Had A Little Lamb
-    public string Pattern = "E D C D E E E  D D D  E G G  E D C D E E E  D D E D CC";
+internal class Track(string name, Instrument instrument)
+{
+    public string Name => name;
+    public Instrument Instrument => instrument;
+    public readonly List<NoteToPlay> Notes = new();
 
-    private int? SemitoneFromTime(double s)
+    public void NotesFromPattern(string pattern, double stepLength = 1.0, double notePercentage = 0.8)
     {
-        var beatIndex = IndexFromTime(s);
-        if (beatIndex >= Pattern.Length) return null;
-        var key = Pattern[beatIndex];
-
-        var semitone = "AaBCcDdEFfGg".IndexOf(key);
-        if (semitone == -1) return null;
-        return semitone;
-    }
-
-    private int IndexFromTime(double s)
-    {
-        var beatsPerSecond = BeatsPerMinute / 60.0;
-        var beatIndex = (int)Math.Floor(s * beatsPerSecond);
-        return beatIndex;
-    }
-
-    private ActiveNote? _activeNote = null;
-    private Synth _synth = new Synth();
-    public double Synth(double time)
-    {
-        var tone = SemitoneFromTime(time);
-        if (tone != null)
+        Notes.Clear();
+        var noteMap = "AaBCcDdEFfGg";
+        var tokens = pattern.Split([' '], StringSplitOptions.RemoveEmptyEntries);
+        double beat = 0;
+        foreach (var token in tokens)
         {
-            if (_activeNote != null && _activeNote.Semitone != tone.Value)
-            {
-                _activeNote.NoteOff(time);
-                _activeNote = null;
-            }
+            if (token.Length == 0) continue;
+            var key = token[0];
+            int semitone = noteMap.IndexOf(key);
+            Notes.Add(new NoteToPlay(beat, stepLength * notePercentage, semitone));
+            beat += stepLength;
+        }
+    }
+}
 
-            if (_activeNote == null)
+public class Bpm(double bpm=120)
+{
+    public double BeatsPerMinute = bpm;
+
+    public double SecondsFromBeats(double beats)
+    {
+        return beats * 60.0 / BeatsPerMinute;
+    }
+
+    public double BeatsFromSeconds(double seconds)
+    {
+        return seconds * BeatsPerMinute / 60.0;
+    }
+}
+
+internal class Song(WesternScale scale) : Bpm
+{
+    // https://en.wikipedia.org/wiki/Tempo#Approximately_from_the_slowest_to_the_fastest
+
+    private readonly List<Track> _tracks = new ();
+
+    public Track NewTrack(string name, Instrument inst)
+    {
+        var t = new Track(name, inst);
+        _tracks.Add(t);
+        return t;
+    }
+
+    public double Length => _tracks
+        .SelectMany(track => track.Notes.Select(note => new { track.Instrument, EndTIme = note.EndTimeBeat}))
+        .Max(x => x.Instrument.Envelope.GetFade(SecondsFromBeats(x.EndTIme)));
+
+    // todo(Gustav): move player out of song
+    private readonly List<(ActiveNote, NoteToPlay)> _activeNotes = new();
+    private readonly Synth _synth = new Synth();
+    private double _lastTimeSec = -1;
+    public double Synth(double currentTimeSec)
+    {
+        bool IsTriggered(double tBeat)
+        {
+            return BeatsFromSeconds(_lastTimeSec) < tBeat && tBeat <= BeatsFromSeconds(currentTimeSec);
+        }
+        foreach (var track in _tracks)
+        {
+            // todo(Gustav): this should be ordered better
+            foreach (var note in track.Notes)
             {
-                _activeNote = _synth.NoteOn(time, tone.Value, instrument);
+                if (!IsTriggered(note.StartTimeBeat)) continue;
+                var playing = _synth.NoteOn(SecondsFromBeats(note.StartTimeBeat), note.Semitone, track.Instrument);
+                _activeNotes.Add((playing, note));
             }
         }
 
-        if (tone == null && _activeNote != null)
+        for(int noteIndex = 0; noteIndex<_activeNotes.Count;)
         {
-            _activeNote.NoteOff(time);
-            _activeNote = null;
+            var (playing, note) = _activeNotes[noteIndex];
+            if (!IsTriggered(note.EndTimeBeat))
+            {
+                // not triggered, ignore
+                noteIndex += 1;
+            }
+            else
+            {
+                // triggered, stop playing, and remove from tracking notes
+                playing.NoteOff(SecondsFromBeats(note.EndTimeBeat));
+                _activeNotes.RemoveAt(noteIndex);
+            }
         }
 
-        _synth.Clean(time);
+        _synth.RemoveInactiveTones(currentTimeSec);
 
-        return _synth.Evaluate(scale, time);
+        _lastTimeSec = currentTimeSec;
+        return _synth.Evaluate(scale, currentTimeSec);
     }
 }

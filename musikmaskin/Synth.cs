@@ -80,7 +80,7 @@ internal class Synth
         return note;
     }
 
-    public void Clean(double time)
+    public void RemoveInactiveTones(double time)
     {
         ActiveNotes.RemoveAll(note => note.IsAlive(time) == false);
     }
@@ -102,6 +102,9 @@ interface Envelope
 {
     double AmplitudeAt(double time, double notePressedTime, double? noteReleaseTime);
     bool IsAlive(double time, double releaseTime);
+
+    // if note ends at time, when does it truly end?
+    public abstract double GetFade(double time);
 }
 
 public record EnvelopeADSR(double AttackTime, double DecayTime, double ReleaseTime, double SustainAmplitude) : Envelope
@@ -124,6 +127,11 @@ public record EnvelopeADSR(double AttackTime, double DecayTime, double ReleaseTi
     {
         var life = time - noteReleasedTime;
         return life < ReleaseTime;
+    }
+
+    public double GetFade(double time)
+    {
+        return time + ReleaseTime;
     }
 
     private double CalculateAds(double time, double notePressedTime)

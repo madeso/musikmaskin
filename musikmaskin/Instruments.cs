@@ -1,6 +1,6 @@
 ﻿namespace MusikMaskin;
 
-internal class SimpleInstrument() : Instrument(new EnvelopeADSR(0.1, 0.1, 0.2, 0.8))
+internal class SimpleInstrument() : Instrument(new EnvelopeADSR(0.1, 0.1, 0.1, 0.8))
 {
     public override double GetTone(double time, WesternScale scale, ActiveNote note)
     {
