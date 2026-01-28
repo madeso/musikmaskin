@@ -141,16 +141,22 @@ public record EnvelopeADSR(double AttackTime, double DecayTime, double ReleaseTi
 
         // ads
         var attackLife = life - AttackTime;
-        if (attackLife < 0) return life/AttackTime;
+        if (attackLife < 0) return CleanAmplitude(life / AttackTime);
 
         if (attackLife < DecayTime)
         {
             var sustainChange = 1 - SustainAmplitude;
             var timeFromAttack = attackLife / DecayTime;
             var attackVolume = 1;
-            return attackVolume - timeFromAttack * sustainChange;
+            return CleanAmplitude(attackVolume - timeFromAttack * sustainChange);
         }
 
-        return SustainAmplitude;
+        return CleanAmplitude(SustainAmplitude);
+
+        static double CleanAmplitude(double d)
+        {
+            if (d < 0.01) return 0;
+            return d;
+        }
     }
 }
