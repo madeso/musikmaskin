@@ -10,33 +10,61 @@ internal class WesternScale(double tuningFrequency = 440.0)
     public double FrequencyFromSemitone(double semiToneFromA2) => BaseFrequency * Math.Pow(SemitoneBaseStep, semiToneFromA2);
 }
 
-internal static class Oscillator
+
+internal enum Oscillator
 {
+    Sine, Square, Triangle, SawWarm, SawHarsh, Noise
+}
+
+internal class OscillatorSettings
+{
+    public double LfoHz {get; set;} = 0;
+    public double LfoAmplitude { get; set; } = 0;
+    public int SawWarmSteps { get; set; } = 50;
+}
+
+internal static class OscillatorFunctions
+{
+    public static double Generate(this Oscillator osc, double time, double hz, OscillatorSettings? settings = null)
+    {
+        var set = settings ?? new OscillatorSettings();
+        var freq = time * W(hz) + set.LfoAmplitude * Math.Sin(W(set.LfoHz) * time);
+        return osc switch
+        {
+            Oscillator.Sine => Math.Sin(freq),
+            Oscillator.Square => Math.Sin(freq) > 0.0 ? 1.0 : -1.0,
+            Oscillator.Triangle => Math.Asin(Math.Sin(freq)) * (2.0 / Math.PI),
+            Oscillator.SawWarm => GenerateSawWarm(freq, set.SawWarmSteps),
+            Oscillator.SawHarsh => GenerateSawHarsh(time, hz),
+            Oscillator.Noise => GenerateNoise(),
+            _ => throw new ArgumentOutOfRangeException(nameof(osc), osc, null)
+        };
+    }
     // from hertz to angular velocity
     private static double W(double hertz) => hertz * Math.PI * 2;
 
-    public static double Sine(double t, double freq) => Math.Sin(t * W(freq));
-    public static double Square(double t, double freq) => Math.Sin(t * W(freq)) > 0.0 ? 1.0 : -1.0;
-    public static double Triangle(double t, double freq) => Math.Asin(Math.Sin(t * W(freq))) * (2.0 / Math.PI);
-
-    public static double SawWarm(double t, double freq, int steps)
+    private static double GenerateSawWarm(double freq, int steps)
     {
         var r = 0.0;
         for (var stepIndex = 1; stepIndex <= steps; stepIndex += 1)
         {
-            r += Math.Sin(stepIndex * t * W(freq)) / stepIndex;
+            r += Math.Sin(stepIndex * freq) / stepIndex;
         }
         return r;
     }
 
-    public static double SawHarsh(double t, double freq) => (2 / Math.PI) * (freq * Math.PI * (t % (1.0 / freq)) - Math.PI / 2);
+    private static double GenerateSawHarsh(double time, double hz) => (2 / Math.PI) * (hz * Math.PI * (time % (1.0 / hz)) - Math.PI / 2);
 
-    private static readonly Random Rng = new Random();
-    public static double Noise() => Rng.NextDouble() * 2 - 1;
+    private static readonly Random Rng = new();
+    private static double GenerateNoise() => Rng.NextDouble() * 2 - 1;
 }
 
 internal abstract class Instrument(Envelope envelope)
 {
+    public abstract string Name
+    {
+        get;
+    }
     public Envelope Envelope => envelope;
     public abstract double GetTone(double time, WesternScale scale, ActiveNote note);
 }
@@ -48,6 +76,7 @@ internal class ActiveNote(Instrument instrument, int semitone, double pressedTim
 
     public int Semitone => semitone;
 
+    public double PressedTime => pressedTime;
     public double? ReleasedTime => _releasedTime;
 
     public void NoteOff(double time)
@@ -141,19 +170,19 @@ public record EnvelopeADSR(double AttackTime, double DecayTime, double ReleaseTi
 
         // ads
         var attackLife = life - AttackTime;
-        if (attackLife < 0) return CleanAmplitude(life / AttackTime);
+        if (attackLife < 0) return ApplyAmplitudeLimit(life / AttackTime);
 
         if (attackLife < DecayTime)
         {
             var sustainChange = 1 - SustainAmplitude;
             var timeFromAttack = attackLife / DecayTime;
             var attackVolume = 1;
-            return CleanAmplitude(attackVolume - timeFromAttack * sustainChange);
+            return ApplyAmplitudeLimit(attackVolume - timeFromAttack * sustainChange);
         }
 
-        return CleanAmplitude(SustainAmplitude);
+        return ApplyAmplitudeLimit(SustainAmplitude);
 
-        static double CleanAmplitude(double d)
+        static double ApplyAmplitudeLimit(double d)
         {
             if (d < 0.01) return 0;
             return d;

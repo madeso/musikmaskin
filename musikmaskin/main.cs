@@ -32,6 +32,11 @@ public class SongCommand : Command<SongCommand.Arg>
         [Description("The beats/minute")]
         [DefaultValue(120)]
         public int Bpm { get; init; }
+
+        [CommandOption("-i|--instrument")]
+        [Description("The instrument to load")]
+        [DefaultValue(null)]
+        public string? Instrument { get; init; }
     }
 
     private static void Print(string status, string what = "Synth") => AnsiConsole.MarkupLine($"{what}: [green]{status}[/]!");
@@ -44,7 +49,25 @@ public class SongCommand : Command<SongCommand.Arg>
         {
             BeatsPerMinute = arg.Bpm
         };
-        var errors = song.NewTrack("song", new SimpleInstrument()).NotesFromPattern(pattern);
+
+        Instrument? instrument = null;
+
+        if (arg.Instrument != null)
+        {
+            instrument = ComplexInstrument.Load(arg.Instrument);
+            if (instrument == null)
+            {
+                Console.WriteLine("Failed to load instrument, aborting");
+                return -1;
+            }
+        }
+        else
+        {
+            instrument = new SimpleInstrument();
+        }
+
+        Print($"Using {instrument.Name}");
+        var errors = song.NewTrack("song", instrument).NotesFromPattern(pattern);
         if (errors.Length > 0)
         {
             foreach (var err in errors)
@@ -97,7 +120,7 @@ public class AutoMusicCommand : Command<AutoMusicCommand.Arg>
 
         Print("Stereo sample", "Synthing");
         double master = 0.5;
-        SynthGen.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: master * Oscillator.Sine(t, 440), Right: master * 0.5 * Oscillator.Square(t, 400)))
+        SynthGen.SynthStereo(TimeSpan.FromSeconds(3), t => new Sample(Left: master * Oscillator.Sine.Generate(t, 440), Right: master * 0.5 * Oscillator.Square.Generate(t, 400)))
             .WriteToDisk("stereo.wav");
 
         Print("Done");
