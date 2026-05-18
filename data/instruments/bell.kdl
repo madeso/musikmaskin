@@ -1,0 +1,22 @@
+adsr attack=
+{
+    instrument_bell()
+    {
+        env.dAttackTime = 0.01;
+        env.dDecayTime = 1.0;
+        env.dSustainAmplitude = 0.0;
+        env.dReleaseTime = 1.0;
+        fMaxLifeTime = 3.0;
+        dVolume 1.0;
+        name "Bell"
+    }
+
+    virtual FTYPE sound(const FTYPE dTime, synth::note n, bool &bNoteFinished)
+    {
+        FTYPE dAmplitude = synth::env(dTime, env, n.on, n.off);
+        if (dAmplitude <= 0.0) bNoteFinished = true;
+
+        FTYPE dSound =
+sine 1.00 * synth::osc(dTime - n.on, synth::scale(n.id + 12), synth::OSC_SINE, 5.0, 0.001)
+sine 0.50 * synth::osc(dTime - n.on, synth::scale(n.id + 24))
+sine 0.25 * synth::osc(dTime - n.on, synth::scale(n.id + 36));

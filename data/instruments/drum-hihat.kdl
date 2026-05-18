@@ -1,0 +1,26 @@
+struct instrument_drumhihat : public instrument_base
+{
+    instrument_drumhihat()
+    {
+        env.dAttackTime = 0.01;
+        env.dDecayTime = 0.05;
+        env.dSustainAmplitude = 0.0;
+        env.dReleaseTime = 0.0;
+        fMaxLifeTime = 1.0;
+        name = L"Drum HiHat";
+        dVolume = 0.5;
+    }
+
+    virtual FTYPE sound(const FTYPE dTime, synth::note n, bool &bNoteFinished)
+    {
+        FTYPE dAmplitude = synth::env(dTime, env, n.on, n.off);
+        if (fMaxLifeTime > 0.0 && dTime - n.on >= fMaxLifeTime)	bNoteFinished = true;
+
+        FTYPE dSound =
+            + 0.1 * synth::osc(dTime - n.on, synth::scale(n.id -12), synth::OSC_SQUARE, 1.5, 1)
+            + 0.9 * synth::osc(dTime - n.on, 0, synth::OSC_NOISE);
+
+        return dAmplitude * dSound * dVolume;
+    }
+
+};

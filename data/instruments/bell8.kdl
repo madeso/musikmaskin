@@ -1,0 +1,28 @@
+
+struct instrument_bell8 : public instrument_base
+{
+    instrument_bell8()
+    {
+        env.dAttackTime = 0.01;
+        env.dDecayTime = 0.5;
+        env.dSustainAmplitude = 0.8;
+        env.dReleaseTime = 1.0;
+        fMaxLifeTime = 3.0;
+        dVolume = 1.0;
+        name = L"8-Bit Bell";
+    }
+
+    virtual FTYPE sound(const FTYPE dTime, synth::note n, bool &bNoteFinished)
+    {
+        FTYPE dAmplitude = synth::env(dTime, env, n.on, n.off);
+        if (dAmplitude <= 0.0) bNoteFinished = true;
+
+        FTYPE dSound =
+            +1.00 * synth::osc(dTime - n.on, synth::scale(n.id), synth::OSC_SQUARE, 5.0, 0.001)
+            + 0.50 * synth::osc(dTime - n.on, synth::scale(n.id + 12))
+            + 0.25 * synth::osc(dTime - n.on, synth::scale(n.id + 24));
+
+        return dAmplitude * dSound * dVolume;
+    }
+
+};

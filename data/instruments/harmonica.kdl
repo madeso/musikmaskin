@@ -1,0 +1,8 @@
+name Harmonica
+envelope-adsr 0.00 1.0 0.95 0.1
+volume 0.3
+
+saw    1.0  -12 time=pressed-time lfo-hertz=5.0 lfo-amplitude=0.001 steps=100
+square 1.00   0 time=time-pressed lfo-hertz=5.0 lfo-amplitude=0.001
+square 0.50 +12 time=time-pressed
+noise  0.05 +24 time=time-pressed

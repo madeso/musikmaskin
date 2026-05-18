@@ -1,0 +1,28 @@
+
+
+struct instrument_drumkick : public instrument_base
+{
+    instrument_drumkick()
+    {
+        env.dAttackTime = 0.01;
+        env.dDecayTime = 0.15;
+        env.dSustainAmplitude = 0.0;
+        env.dReleaseTime = 0.0;
+        fMaxLifeTime = 1.5;
+        name = L"Drum Kick";
+        dVolume = 1.0;
+    }
+
+    virtual FTYPE sound(const FTYPE dTime, synth::note n, bool &bNoteFinished)
+    {
+        FTYPE dAmplitude = synth::env(dTime, env, n.on, n.off);
+        if(fMaxLifeTime > 0.0 && dTime - n.on >= fMaxLifeTime)	bNoteFinished = true;
+
+        FTYPE dSound =
+            + 0.99 * synth::osc(dTime - n.on, synth::scale(n.id - 36), synth::OSC_SINE, 1.0, 1.0)
+            + 0.01 * synth::osc(dTime - n.on, 0, synth::OSC_NOISE);
+            
+        return dAmplitude * dSound * dVolume;
+    }
+
+};
